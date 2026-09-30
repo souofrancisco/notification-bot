@@ -62,7 +62,7 @@ async function start() {
 
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
-    app.log.info(`Servidor ARGO Notifier ativo na porta ${config.port}`);
+    app.log.info(`Servidor Notification Bot Notifier ativo na porta ${config.port}`);
 
     // Inicializar sessão WhatsApp
     await initWhatsApp();

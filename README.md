@@ -1,220 +1,156 @@
-# ARGO Notifications Bot
+# Notification Bot Notifier
 
-Serviço leve em Node.js (TypeScript + Fastify + Baileys) para encaminhar notificações essenciais do **GitHub** e do **Jira** para grupos dedicados do **WhatsApp**, sem complexidade desnecessária (zero bases de dados, zero Redis, zero message brokers).
+[![Node.js](https://img.shields.io/badge/Node.js-22%2B-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
----
+> A lightweight, modular notification service that transforms GitHub and Jira webhooks into clean, real-time WhatsApp updates.
 
-## 1. Arquitetura e Decisão de Design
-
-```text
-                       INTERNET
-                          |
-             +------------+-------------+
-             |                          |
-           GitHub                      Jira
-             |                          |
-          Webhook                 Automation Rule
-             |                   Send web request
-             |                          |
-             v                          v
-     POST /webhooks/github      POST /webhooks/jira
-             |                          |
-             +------------+-------------+
-                          |
-                     Notifier
-                 Node.js + Fastify
-                          |
-                 +--------+--------+
-                 |                 |
-          GitHub Formatter    Jira Formatter
-                 |                 |
-                 v                 v
-        Grupo GitHub WA     Grupo Jira WA
+```
+🟣 Notification Bot GitHub — Pull Request
+#42 Plugin Registry
+Aberta por Francisco
+feature/plugin-registry -> main
+https://github.com/org/repo/pull/42
 ```
 
-- **1 processo Node.js**
-- **1 sessão WhatsApp** persistida em volume
-- **2 grupos de destino** (`WHATSAPP_GITHUB_CHAT_ID` e `WHATSAPP_JIRA_CHAT_ID`)
-- **2 endpoints webhook** (`/webhooks/github` e `/webhooks/jira`)
-- **Fail-fast no arranque**: falha se faltarem variáveis de ambiente críticas no `.env`.
+---
+
+## What is Notification Bot Notifier?
+
+Notification Bot Notifier is a self-hosted webhook consumer built with Fastify, TypeScript, and Baileys (WhatsApp Web API). It centralizes engineering activity from GitHub and Jira, formats events into structured Markdown-like messages, and delivers them directly to dedicated WhatsApp groups without requiring third-party bot platforms or complex cloud orchestration.
+
+## Features
+
+- **GitHub Integration:** PRs (opened, reopened, ready for review, merged), reviews (approved, changes requested), branch pushes, CI failures (`workflow_run`).
+- **Jira Integration:** Task creation, transitions (in progress, completed, reopened), coordinator updates, sprint changes.
+- **Zero Third-Party Cloud Fees:** Direct WhatsApp Web socket session using Baileys — no Twilio or Business API billing.
+- **Secure Webhooks:** Strict HMAC SHA-256 signature verification for GitHub and token authorization for Jira.
+- **Clean Architecture:** Strict decoupling between event sources (`sources/`), delivery channels (`channels/`), and the shared core contract (`core/`).
+
+## How It Works
+
+```
+GitHub ──┐
+         ├──> [ Sources ] ──> [ Notifier Composition ] ──> [ Channels ] ──> WhatsApp
+Jira ────┘
+```
+
+## Architecture
+
+The codebase enforces unidirectional responsibility:
+- **`src/core/`**: Minimal contracts (e.g. `MessageChannel`). Independent of external platforms.
+- **`src/sources/`**: Webhook receivers, HMAC/token verification, and event formatters (`github`, `jira`). Sources do not know which channel delivers the message.
+- **`src/channels/`**: Delivery adapters (`whatsapp`). Channels do not know where events originate or what they mean.
+- **`src/index.ts`**: Composition root injecting channels into source handlers.
+
+Detailed guide: [Architecture Documentation](docs/architecture.md)
 
 ---
 
-## 2. Configuração e Variáveis de Ambiente
-
-Copiar o modelo de ambiente:
+## Quick Start
 
 ```bash
-cp .env.example .env
-```
+# 1. Clone the repository
+git clone https://github.com/your-org/argo-notifier.git
+cd argo-notifier
 
-Campos obrigatórios no `.env`:
-
-```env
-PORT=3000
-
-# JIDs dos grupos WhatsApp obtidos via `npm run list-groups`
-WHATSAPP_GITHUB_CHAT_ID=12036xxxxxxxx@g.us
-WHATSAPP_JIRA_CHAT_ID=12036yyyyyyyy@g.us
-
-# Segredos de validação
-GITHUB_WEBHOOK_SECRET=um_segredo_forte_para_github
-JIRA_WEBHOOK_SECRET=um_segredo_forte_para_jira
-
-# Branch vigiada para commits
-GITHUB_DEFAULT_BRANCH=main
-```
-
----
-
-## 3. Autenticação e Obtenção dos IDs dos Grupos (WhatsApp)
-
-1. Executar o script de discovery:
-   ```bash
-   npm run list-groups
-   ```
-2. Um QR Code será impresso no terminal.
-3. No WhatsApp do telemóvel, aceder a **Dispositivos Conectados** > **Conectar um dispositivo** e ler o QR Code.
-4. Após conectar, o script lista todos os grupos da conta com o respetivo JID:
-   ```text
-   ARGO — GitHub -> 12036xxxxxxxx@g.us
-   ARGO — Jira   -> 12036yyyyyyyy@g.us
-   ```
-5. Copiar os IDs para `WHATSAPP_GITHUB_CHAT_ID` e `WHATSAPP_JIRA_CHAT_ID` no ficheiro `.env`.
-6. As credenciais ficam guardadas localmente em `./data/whatsapp-auth/` para evitar reautenticações futuras.
-
-> ⚠️ **Segurança da Sessão Baileys:** A pasta `data/whatsapp-auth/` contém chaves criptográficas que conferem acesso total à conta WhatsApp ligada. Nunca comite esta pasta nem partilhe os ficheiros de sessão. O diretório está explicitamente ignorado no `.gitignore`.
-
----
-
-## 4. Configurar Webhook no GitHub
-
-No repositório do GitHub:
-1. Aceder a **Settings** > **Webhooks** > **Add webhook**.
-2. **Payload URL**: `https://<seu-dominio>/webhooks/github`
-3. **Content type**: `application/json`
-4. **Secret**: o mesmo valor definido em `GITHUB_WEBHOOK_SECRET`.
-5. Selecionar **Let me select individual events**:
-   - `Pushes` (notifica pushes na branch configurada em `GITHUB_DEFAULT_BRANCH`)
-   - `Pull requests` (opened, reopened, ready_for_review, closed com merge)
-   - `Pull request reviews` (apenas approved ou changes_requested)
-   - `Workflow runs` (apenas falhas no CI)
-6. Guardar o webhook. Todas as entregas são validadas criptograficamente através de HMAC SHA-256 (`X-Hub-Signature-256`).
-
----
-
-## 5. Configurar Jira Automation Rules
-
-Em vez de criar uma app Atlassian Connect ou Forge, o notifier usa as **Automation Rules** nativas do Jira Cloud com a ação **Send web request**.
-
-### Headers comuns a todas as regras:
-- `Content-Type`: `application/json`
-- `X-ARGO-Secret`: valor configurado em `JIRA_WEBHOOK_SECRET`
-- Método: `POST`
-- Webhook URL: `https://<seu-dominio>/webhooks/jira`
-
-### Regras mínimas recomendadas:
-
-#### Regra 1 — Issue Criada
-- **Gatilho**: *Issue created*
-- **Payload**:
-  ```json
-  {
-    "event": "issue_created",
-    "key": "{{issue.key}}",
-    "summary": "{{issue.summary}}",
-    "status": "{{issue.status.name}}",
-    "actor": "{{initiator.displayName}}",
-    "url": "{{issue.url}}"
-  }
-  ```
-
-#### Regra 2 — Estado Alterado (inclui Concluída e Reaberta)
-- **Gatilho**: *Issue transitioned*
-- **Payload**:
-  ```json
-  {
-    "event": "status_changed",
-    "key": "{{issue.key}}",
-    "summary": "{{issue.summary}}",
-    "status": "{{issue.status.name}}",
-    "fromStatus": "{{changelog.status.fromString}}",
-    "toStatus": "{{issue.status.name}}",
-    "actor": "{{initiator.displayName}}"
-  }
-  ```
-
-#### Regra 3 — Coordenadores Alterados
-- **Gatilho**: *Field value changed* (campo Coordenadores)
-- **Payload**:
-  ```json
-  {
-    "event": "coordinators_changed",
-    "key": "{{issue.key}}",
-    "summary": "{{issue.summary}}",
-    "coordinators": "{{issue.Coordenadores.displayName}}"
-  }
-  ```
-
-#### Regra 4 — Sprint Alterada
-- **Gatilho**: *Field value changed* (campo Sprint)
-- **Payload**:
-  ```json
-  {
-    "event": "sprint_changed",
-    "key": "{{issue.key}}",
-    "summary": "{{issue.summary}}",
-    "fromSprint": "Backlog",
-    "toSprint": "{{issue.Sprint.name}}"
-  }
-  ```
-
----
-
-## 6. Códigos de Resposta HTTP
-
-- `200 OK`: Webhook processado (mensagem entregue ou evento ignorado propositadamente).
-- `401 Unauthorized`: Assinatura HMAC do GitHub inválida ou header `X-ARGO-Secret` incorreto.
-- `400 Bad Request`: Payload ausente ou formato inválido.
-- `503 Service Unavailable`: Evento válido e mensagem formatada, mas a sessão WhatsApp encontra-se desconectada ou indisponível. Permite ao emissor identificar a falha de entrega.
-
----
-
-## 7. Execução e Deployment
-
-### Desenvolvimento Local
-```bash
+# 2. Install dependencies
 npm install
+
+# 3. Create environment file
+cp .env.example .env
+
+# 4. Authenticate WhatsApp and retrieve Group JIDs
+npm run list-groups
+
+# 5. Populate .env with secrets and group JIDs
+# (See Configuration section below)
+
+# 6. Start in development mode
 npm run dev
 ```
 
-### Build e Execução Manual
-```bash
-npm run build
-npm start
-```
+---
 
-### Testes Automatizados
+## Setup Guides
+
+Follow the step-by-step setup guides:
+- [WhatsApp Setup](docs/setup/whatsapp.md) — Session authentication and group IDs.
+- [GitHub Setup](docs/setup/github.md) — Webhooks, secrets, and supported events.
+- [Jira Setup](docs/setup/jira.md) — Jira Automation rules and payload formats.
+
+---
+
+## Configuration
+
+| Variable | Required | Example | Purpose |
+| :--- | :--- | :--- | :--- |
+| `PORT` | No | `3000` | HTTP server port |
+| `WHATSAPP_GITHUB_CHAT_ID` | Yes | `120363000000000000@g.us` | WhatsApp group JID for GitHub |
+| `WHATSAPP_JIRA_CHAT_ID` | Yes | `120363111111111111@g.us` | WhatsApp group JID for Jira |
+| `GITHUB_WEBHOOK_SECRET` | Yes | `32-byte-hex-secret` | GitHub HMAC-SHA256 secret |
+| `JIRA_WEBHOOK_SECRET` | Yes | `32-byte-hex-secret` | Jira webhook authorization secret |
+| `GITHUB_DEFAULT_BRANCH` | No | `main` | Branch monitored for push notifications |
+
+Detailed configuration: [Configuration Documentation](docs/configuration.md)
+
+---
+
+## Running the Application
+
 ```bash
+# Run tests
 npm test
+
+# Build TypeScript
+npm run build
+
+# Start production server
+npm start
+
+# Or using Docker Compose
+docker compose up -d --build
 ```
 
-### Docker & Docker Compose (Produção)
-O deployment em produção recomenda uma VPS com armazenamento persistente montado em `./data`:
-
-```bash
-docker compose build
-docker compose up -d
-```
-
-Verificação de saúde:
+Health check:
 ```bash
 curl http://localhost:3000/health
-# {"status":"ok","whatsapp":"connected"}
+# Response: {"status":"ok","whatsapp":"connected"}
 ```
 
 ---
 
-## 8. Licença
+## Documentation Index
 
-Distribuído sob a licença MIT. Consulte [LICENSE](file:///home/souofrancisco/Documents/ME/notification-bot/LICENSE) para mais informações.
+| Guide | Description |
+| :--- | :--- |
+| [Documentation Overview](docs/README.md) | Complete documentation index and navigation |
+| [Getting Started](docs/getting-started.md) | Full setup checklist from prerequisites to production |
+| [Configuration](docs/configuration.md) | Environment variables and runtime validation |
+| [Architecture](docs/architecture.md) | Core contracts, sources, channels, and extending |
+| [WhatsApp Setup](docs/setup/whatsapp.md) | Baileys pairing, JID discovery, and session lifecycle |
+| [GitHub Setup](docs/setup/github.md) | Webhook delivery, HMAC verification, and events |
+| [Jira Setup](docs/setup/jira.md) | Jira Automation Rules step-by-step with payloads |
+| [Deployment](docs/deployment.md) | Docker, persistent volumes, reverse proxy, and systemd |
+| [Security](docs/security.md) | Secret handling, credential rotation, and attack mitigation |
+| [Troubleshooting](docs/troubleshooting.md) | Common errors (401, 503, disconnects) and diagnostics |
+
+---
+
+## Security
+
+**Never commit credentials or auth state:**
+- Never commit `.env` or `.env.*`
+- Never commit or upload `data/` or `data/whatsapp-auth/`
+- Review our [Security Guide](docs/security.md) and [SECURITY.md](SECURITY.md) to report vulnerabilities.
+
+---
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for pull request workflows and architectural guidelines.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

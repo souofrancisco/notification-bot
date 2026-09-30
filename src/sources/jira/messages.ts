@@ -30,7 +30,7 @@ export interface JiraSprintData {
 // Jira Formatters
 export function formatJiraIssueCreated(data: JiraIssueData): string {
   const lines = [
-    '🔵 ARGO Jira — Nova task',
+    '🔵 Notification Bot Jira — Nova task',
     '',
     `${data.key} — ${data.summary}`,
     '',
@@ -52,7 +52,7 @@ export function formatJiraStatusChanged(data: JiraStatusChangedData): string {
   // Concluída
   if (toNormalized === 'concluído' || toNormalized === 'concluido' || toNormalized === 'done') {
     const lines = [
-      '✅ ARGO Jira — Task concluída',
+      '✅ Notification Bot Jira — Task concluída',
       '',
       `${data.key} — ${data.summary}`,
     ];
@@ -68,7 +68,7 @@ export function formatJiraStatusChanged(data: JiraStatusChangedData): string {
     (toNormalized.includes('fazer') || toNormalized.includes('andamento') || toNormalized.includes('to do') || toNormalized.includes('in progress'))
   ) {
     return [
-      '↩️ ARGO Jira — Task reaberta',
+      '↩️ Notification Bot Jira — Task reaberta',
       '',
       `${data.key} — ${data.summary}`,
       '',
@@ -78,7 +78,7 @@ export function formatJiraStatusChanged(data: JiraStatusChangedData): string {
 
   // Mudança de estado normal
   const lines = [
-    '🔵 ARGO Jira — Estado alterado',
+    '🔵 Notification Bot Jira — Estado alterado',
     '',
     `${data.key} — ${data.summary}`,
     '',
@@ -99,7 +99,7 @@ export function formatJiraStatusChanged(data: JiraStatusChangedData): string {
 
 export function formatJiraCoordinatorsChanged(data: JiraCoordinatorsData): string {
   return [
-    '👥 ARGO Jira — Coordenadores alterados',
+    '👥 Notification Bot Jira — Coordenadores alterados',
     '',
     `${data.key} — ${data.summary}`,
     '',
@@ -111,7 +111,7 @@ export function formatJiraCoordinatorsChanged(data: JiraCoordinatorsData): strin
 export function formatJiraSprintChanged(data: JiraSprintData): string {
   const from = data.fromSprint || 'Backlog';
   return [
-    '🏃 ARGO Jira — Sprint alterada',
+    '🏃 Notification Bot Jira — Sprint alterada',
     '',
     `${data.key} — ${data.summary}`,
     '',

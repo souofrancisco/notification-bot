@@ -49,7 +49,7 @@ export function formatPROpened(data: GitHubPROpenedData): string {
   }
 
   return [
-    '🟣 ARGO GitHub — Pull Request',
+    '🟣 Notification Bot GitHub — Pull Request',
     '',
     `#${data.number} ${data.title}`,
     actionLabel,
@@ -62,7 +62,7 @@ export function formatPROpened(data: GitHubPROpenedData): string {
 
 export function formatPRMerged(data: GitHubPRMergedData): string {
   return [
-    '✅ ARGO GitHub — PR merged',
+    '✅ Notification Bot GitHub — PR merged',
     '',
     `#${data.number} ${data.title}`,
     '',
@@ -72,7 +72,7 @@ export function formatPRMerged(data: GitHubPRMergedData): string {
 
 export function formatPRReview(data: GitHubPRReviewData): string {
   const isApproved = data.state === 'approved';
-  const header = isApproved ? '✅ ARGO GitHub — PR aprovada' : '⚠️ ARGO GitHub — Alterações pedidas';
+  const header = isApproved ? '✅ Notification Bot GitHub — PR aprovada' : '⚠️ Notification Bot GitHub — Alterações pedidas';
   return [
     header,
     '',
@@ -99,7 +99,7 @@ export function formatPush(data: GitHubPushData): string {
   const lastSha = data.commits[data.commits.length - 1]?.id.substring(0, 7) || '';
 
   const lines = [
-    `🟣 ARGO GitHub — Push para ${data.branch}`,
+    `🟣 Notification Bot GitHub — Push para ${data.branch}`,
     '',
     `${data.sender} enviou ${count} ${commitWord}`,
     '',
@@ -116,7 +116,7 @@ export function formatPush(data: GitHubPushData): string {
 export function formatWorkflowRunFailure(data: GitHubWorkflowRunData): string {
   const shortSha = data.commitSha.substring(0, 7);
   return [
-    '❌ ARGO CI',
+    '❌ Notification Bot CI',
     '',
     `${data.name} falhou`,
     '',

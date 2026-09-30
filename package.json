@@ -1,7 +1,7 @@
 {
   "name": "argo-notifier",
   "version": "1.0.0",
-  "description": "ARGO Notifications Bot for GitHub and Jira to WhatsApp",
+  "description": "Notification Bot Notifications Bot for GitHub and Jira to WhatsApp",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

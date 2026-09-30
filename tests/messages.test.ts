@@ -24,7 +24,7 @@ test('formatPROpened matches expected format for opened, reopened and ready_for_
     url: 'https://github.com/org/repo/pull/42',
     action: 'opened',
   });
-  assert.ok(opened.includes('🟣 ARGO GitHub — Pull Request'));
+  assert.ok(opened.includes('🟣 Notification Bot GitHub — Pull Request'));
   assert.ok(opened.includes('#42 Plugin Registry'));
   assert.ok(opened.includes('Aberta por Francisco'));
   assert.ok(opened.includes('feature/plugin-registry -> main'));
@@ -60,7 +60,7 @@ test('formatPRMerged matches expected format', () => {
     mergedBy: 'Tiago',
   });
 
-  assert.ok(output.includes('✅ ARGO GitHub — PR merged'));
+  assert.ok(output.includes('✅ Notification Bot GitHub — PR merged'));
   assert.ok(output.includes('#42 Plugin Registry'));
   assert.ok(output.includes('Merge por Tiago'));
 });
@@ -72,7 +72,7 @@ test('formatPRReview matches approved and changes requested', () => {
     state: 'approved',
     reviewer: 'Tiago',
   });
-  assert.ok(approved.includes('✅ ARGO GitHub — PR aprovada'));
+  assert.ok(approved.includes('✅ Notification Bot GitHub — PR aprovada'));
   assert.ok(approved.includes('Review: Tiago'));
 
   const changes = formatPRReview({
@@ -81,7 +81,7 @@ test('formatPRReview matches approved and changes requested', () => {
     state: 'changes_requested',
     reviewer: 'Tiago',
   });
-  assert.ok(changes.includes('⚠️ ARGO GitHub — Alterações pedidas'));
+  assert.ok(changes.includes('⚠️ Notification Bot GitHub — Alterações pedidas'));
   assert.ok(changes.includes('Review: Tiago'));
 });
 
@@ -100,7 +100,7 @@ test('formatPush limits commits to 5 and shows count', () => {
     ],
   });
 
-  assert.ok(output.includes('🟣 ARGO GitHub — Push para main'));
+  assert.ok(output.includes('🟣 Notification Bot GitHub — Push para main'));
   assert.ok(output.includes('Francisco enviou 7 commits'));
   assert.ok(output.includes('• Add plugin manifest'));
   assert.ok(output.includes('• Commit 5'));
@@ -117,7 +117,7 @@ test('formatWorkflowRunFailure matches expected format', () => {
     url: 'https://github.com/org/repo/actions/runs/1234',
   });
 
-  assert.ok(output.includes('❌ ARGO CI'));
+  assert.ok(output.includes('❌ Notification Bot CI'));
   assert.ok(output.includes('Build & Test falhou'));
   assert.ok(output.includes('Branch: main'));
   assert.ok(output.includes('Commit: a81bc21'));
@@ -133,7 +133,7 @@ test('formatJiraIssueCreated matches expected format', () => {
     url: 'https://jira.atlassian.net/browse/SCRUM-50',
   });
 
-  assert.ok(output.includes('🔵 ARGO Jira — Nova task'));
+  assert.ok(output.includes('🔵 Notification Bot Jira — Nova task'));
   assert.ok(output.includes('SCRUM-50 — Implementar Plugin Loader'));
   assert.ok(output.includes('Estado: A fazer'));
   assert.ok(output.includes('Criada por: Francisco'));
@@ -148,7 +148,7 @@ test('formatJiraStatusChanged handles regular transition, completion and reopeni
     toStatus: 'Em andamento',
     actor: 'Rafael',
   });
-  assert.ok(regular.includes('🔵 ARGO Jira — Estado alterado'));
+  assert.ok(regular.includes('🔵 Notification Bot Jira — Estado alterado'));
   assert.ok(regular.includes('A fazer -> Em andamento'));
   assert.ok(regular.includes('Por: Rafael'));
 
@@ -159,7 +159,7 @@ test('formatJiraStatusChanged handles regular transition, completion and reopeni
     toStatus: 'Concluído',
     actor: 'Rafael',
   });
-  assert.ok(completed.includes('✅ ARGO Jira — Task concluída'));
+  assert.ok(completed.includes('✅ Notification Bot Jira — Task concluída'));
   assert.ok(completed.includes('Por: Rafael'));
 
   const reopened = formatJiraStatusChanged({
@@ -169,7 +169,7 @@ test('formatJiraStatusChanged handles regular transition, completion and reopeni
     toStatus: 'Em andamento',
     actor: 'Rafael',
   });
-  assert.ok(reopened.includes('↩️ ARGO Jira — Task reaberta'));
+  assert.ok(reopened.includes('↩️ Notification Bot Jira — Task reaberta'));
   assert.ok(reopened.includes('Concluído -> Em andamento'));
 });
 
@@ -180,7 +180,7 @@ test('formatJiraCoordinatorsChanged matches expected format', () => {
     coordinators: 'Francisco, Henrique',
   });
 
-  assert.ok(output.includes('👥 ARGO Jira — Coordenadores alterados'));
+  assert.ok(output.includes('👥 Notification Bot Jira — Coordenadores alterados'));
   assert.ok(output.includes('Francisco, Henrique'));
 });
 
@@ -192,6 +192,6 @@ test('formatJiraSprintChanged matches expected format', () => {
     toSprint: 'S2 — Base Técnica e Plugins',
   });
 
-  assert.ok(output.includes('🏃 ARGO Jira — Sprint alterada'));
+  assert.ok(output.includes('🏃 Notification Bot Jira — Sprint alterada'));
   assert.ok(output.includes('Backlog -> S2 — Base Técnica e Plugins'));
 });
